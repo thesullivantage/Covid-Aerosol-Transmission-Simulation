@@ -9,7 +9,6 @@ Created on Fri Dec  4 00:35:04 2020
 import numpy as np 
 import random as random
 import matplotlib.pyplot as plt 
-from matplotlib.animation import ArtistAnimation, PillowWriter  
 import matplotlib.animation as animation
 
 Writer = animation.writers['ffmpeg']
@@ -24,7 +23,7 @@ width=100
 numX = 100
 numY = 100
 
-# .05 steps
+# Spatial Step
 step = height / numX
 
 
@@ -38,14 +37,14 @@ gridY = np.arange(0, 100, step)
 Np = 50
 # per second 
 dt = 1
-# Diffustion Coefficient
+# Diffustion Coefficient (m**2/s)
 D = .05
 
 # Average walking speed (m/s) chosen from [1]
 avgWalkSpeed = .5
-# Average particles inhaled per second
-Vbreathe = .33
-# Removal Timescale (ventilation)
+# Volume air inhaled per second (m**3/s)
+Vbreathe = .0033
+# Removal Timescale (ventilation) (sseconds)
 tau = 50
 # time from 0 to increment simulation (seconds)
 time = 700 
@@ -58,8 +57,9 @@ def setCoord():
 
 ### PEOPLE INSERTION
 
-# Format [currX, currY, Infected, targetArr, coughOffSet, Dose]
-# coughOffSet chosen arbitrarily so all people do not cough on cue at 10 minute intervals
+# Format [currX, currY, Infected, targetArr, coughOffSet, Dose, velocity]
+# coughOffSet chosen arbitrarily so all people do not cough on 
+# cue at 10 minute intervals
 def makePpl(Np):
     array = []
     # Prevalence of Infected Person 
@@ -84,7 +84,7 @@ def makePpl(Np):
     return array
 
  
-people = makePpl(100)
+people = makePpl(Np)
 
 
 ## DIFFUSION
@@ -107,10 +107,6 @@ def diffStep(c0, c):
     # c0 is shallow copied for next time, but is same as c 
     return c0, c
 
-
-# Average particles inhaled per second [m**-2]
-
-
 def setTarg(coord): 
     
     targ = [setCoord(), setCoord()]
@@ -124,12 +120,14 @@ def setTarg(coord):
 def checkTarg(currCord, currTarg): 
 
     v = np.sqrt(np.abs(currCord[0]-currTarg[0])**2+(currCord[1]-currTarg[1])**2)//1
-    # if distance small enough, or close to a wall, give signal to make new target
+    # if distance small enough, or close to a wall, give signal 
+    # to make new target
     if(v < 0.5 or currCord[0] >= 98 or currCord[1] >= 98 or currCord[0] <= 2 or currCord[1] <= 2):
         return 1
     return 0
         
 
+# Defined for ANIMATION
 fig = plt.figure()
 ims = []
 ### UPDATE EVERYTHING
@@ -166,6 +164,7 @@ for t in range(0, time):
 
         
         ## TRANSMISSION
+        # If infected
         if (infBool  == True):
             # ANIMATION
             infX.append(people[z][0])
@@ -173,14 +172,18 @@ for t in range(0, time):
             # if the person is infected
             # Different result if has just coughed 
             if ( (t + coughSet)  % 600 == 0): 
-                # If time to cough, change concentration at current coordinates
+                # If time to cough, change concentration at current         coordinates
                 # of infected person (Quantized nearest their location in 
                 # Concentration field)
                 c0[int(xCoord), int(yCoord)] += (4*10**5 + 5)
             else: c0[int(xCoord), int(yCoord)] += 5
         else:
+            # Holding for Animation
             healthX.append(people[z][0])
             healthY.append(people[z][1])
+            # Accumulates dose at coordinate, at pre-determined rate of 
+            # breathing at the concentration nearest the person's spatial
+            # coordinates (again, quantized for concentration field)
             dose += c0[int(xCoord), int(yCoord)] * Vbreathe
             if (dose >= 1000):
                 # If healthy person accumulates critical dose of 100 particles, 
@@ -188,9 +191,8 @@ for t in range(0, time):
                 people[z][2] = True
         
         
-        combCoord = people[z][:2]
         ## WALKING
-        
+        combCoord = people[z][:2] # for convenience
         # check to see if hitting a wall or close to target
         if (checkTarg(combCoord, targetArr) == 1):
             # if yes, create new target
@@ -204,7 +206,7 @@ for t in range(0, time):
         
         # References to velocity still work, if we've set above
         # Updating the position coordinates of each person in the people array
-        # Update each person coordinate with explicit Euler forward step 
+        # Update each person coordinate with forward Euler forward scheme 
         people[z][0] = xCoord + people[z][6][0] * dt
         people[z][1] = yCoord + people[z][6][1] * dt
         

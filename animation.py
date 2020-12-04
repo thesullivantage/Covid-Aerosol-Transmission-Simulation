@@ -119,12 +119,13 @@ def checkTarg(currCord, currTarg):
         return 1
     return 0
     
- 
+print("here: ", len(c[0]))
+
 # ANIMATION
 fig, ax = plt.subplots()    
 ln1, = plt.plot([], [], 'ro')  
 ln2, = plt.plot([], [], 'm*')  
-ln3, = plt.imshow([], extent=[0, width, 0, height], origin='lower',cmap='Reds')
+ln3, = plt.imshow(c, extent=[0, width, 0, height], origin='lower',cmap='Reds')
 # IT'S TIME!
 def update(t):
         
@@ -199,14 +200,16 @@ def update(t):
         people[z][1] = yCoord + people[z][6][1] * dt
     
     # Ready to write everything to animation     
-    ln1.set_data(healthX, healthY)
-    ln2.set_data(infX, infY)
-    ln3.set_data(c)        
+    # ln1.set_data(healthX, healthY)
+    # ln2.set_data(infX, infY)
+    # print("here: ", c)
+    # ln3.set_array(c)        
     
 plt.colorbar()
 plt.axis(aspect='image');
 plt.figure(dpi=150)
-ani = FuncAnimation(fig, update, np.linspace(0, 60, 1))
+# ani = Func
+(fig, update, np.linspace(0, 60, 1))
 plt.show()
 
 counter = 0

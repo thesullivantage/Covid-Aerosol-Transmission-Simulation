@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 ## 2D Simulation
 # number of x & y coordinates
-height=100 
+height=100
 width=100
 # Number of points in each dimension 
 numX = 100
@@ -24,7 +24,7 @@ gridY = np.arange(0, 100, step)
 
 
 def setCoord():
-    hold = int(int(height-height/25) * random.random()//1)
+    hold = int(int(height-height/25) * random.random())
     if (hold <= height/25):
         hold += int(height/25)
     return hold 
@@ -33,7 +33,7 @@ def setCoord():
 
 ### PEOPLE INSERTION
 # Number of people
-Np = 25
+Np = 50
 # Format [currX, currY, Infected, targetArr, coughOffSet, Dose]
 # coughOffSet chosen arbitrarily so all people do not cough on cue at 10 minute intervals
 def makePpl(Np):
@@ -41,18 +41,20 @@ def makePpl(Np):
     # Prevalence of Infected Person 
     # ***** May need to come back to this
     infNum = int(Np*.05)
+
     for p in range(Np): 
         # infected people at infNum percent
+        hold = [setCoord(), setCoord(), False, [setCoord(), setCoord()], int(500*random.random()//1), 0]
         if (p <= infNum):
-            hold = [setCoord(), setCoord(), True, [setCoord(), setCoord()], int(500*random.random()//1), 0]
+            hold[2] = True
+    
             
         
         # Otherwise, they are non-infected 
-        hold = [setCoord(), setCoord(), False, [setCoord(), setCoord()], int(500*random.random()//1), 0]
+       
         
 
         distance = np.subtract(np.array(hold[3]), np.array(hold[:2]))
-        # print(distance)
         angle = np.arctan2(distance[1], distance[0])
         velArr = [0, 0]
         velArr[0] = .5 * np.cos(angle) 
@@ -67,12 +69,7 @@ people = makePpl(100)
 
 
 
-
-
-
-
 # ###############################3
-
 
 # SOURCE Here
 
@@ -121,18 +118,21 @@ def setTarg(coord):
 def checkTarg(currCord, currTarg): 
 
     v = np.sqrt(np.abs(currCord[0]-currTarg[0])**2+(currCord[1]-currTarg[1])**2)//1
-    if(v < 0.5 ):
+    if(v < 0.5 or currCord[0] >= 98 or currCord[1] >= 98 or currCord[0] <= 2 or currCord[1] <= 2):
         return 1
     return 0
         
 
-# IT'S TIME! 
+
 
 Vbreathe = .33
-tau = 100
-for t in range(0, 5200): 
+tau = 75
+
+
+# IT'S TIME! 
+for t in range(0, 700): 
     
-    
+
     #### Uncomment this when person done! 
     # # run the diffusion finite difference step
     c0, c = diffStep(c0, c)
@@ -141,7 +141,8 @@ for t in range(0, 5200):
     c0 = c0 - dt * c0/tau
     
 
-    for z in range(len(people)): 
+    for z in range(Np): 
+ 
         xCoord = people[z][0]
         yCoord = people[z][1]
         infBool = people[z][2] 
@@ -151,19 +152,29 @@ for t in range(0, 5200):
         xVel = people[z][6][0]
         yVel = people[z][6][1]
         distance = np.array([0, 0])
-        
+
         # Could use copy here
         # Format [currX, currY, Infected, targetArr, coughOffSet, Dose]
         ##### TRANSMISSION
-        if (infBool == True):
+        if (infBool  == True):
+            # if the person is infected
             if ( t  % 600 == 0): 
+                # If time to cough, change concentration at current coordinates
+                # of infected person (Quantized nearest their location in 
+                # Concentration field)
                 c0[int(xCoord), int(yCoord)] += (4*10**5 + 5)
-                print("bing")
-            c0[xCoord, yCoord] += 5
+            else: c0[int(xCoord), int(yCoord)] += 5
         else: 
-            people[z][5] += c0[int(xCoord), int(yCoord)] * Vbreathe
-        if (dose >= 100):
-            infBool = True
+# =============================================================================
+#             # coordinates are lined up from the beginning 
+# =============================================================================
+            # print(people[z][0], " ", people[z][1])
+            dose += c0[int(xCoord), int(yCoord)] * Vbreathe
+            if (dose >= 700):
+                # If healthy person accumulates critical dose of 100 particles, 
+                # infect them with the virus
+                people[z][2] = True
+        
         
         combCoord = people[z][:2]
         ## WALKING
@@ -171,23 +182,33 @@ for t in range(0, 5200):
             targetArr = setTarg(combCoord)
             distance = np.subtract(np.array(targetArr), np.array(combCoord))
             angle = np.arctan2(distance[1], distance[0])
-            xVel = .5 * np.cos(angle) 
-            yVel = .5 * np.sin(angle)
+            people[z][6][0] = .5 * np.cos(angle) 
+            people[z][6][1] = .5 * np.sin(angle)
         
-        if (t == 700): 
-            break
-            break 
         
-        print("----------------")
-        print(xCoord)
-        xCoord = xCoord + xVel * dt
-        xCoord = xCoord + xVel * dt
-        print(xCoord)
+        # References to velocity still work, if we've set above
+        # Updating the position coordinates of each person in the people array
+        people[z][0] = xCoord + people[z][6][0] * dt
+        people[z][1] = yCoord + people[z][6][1] * dt
         
-plt.imshow(c, extent=[0, 100, 0, 100], origin='lower',cmap='Reds')
-plt.colorbar()
-plt.axis(aspect='image');    
+
+        
+
+plt.imshow(c, extent=[0, width, 0, height], origin='lower',cmap='Reds')
+
     
+
+counter = 0
+for f in range(Np): 
+    if (people[f][2] == True):
+        counter += 1 
+    # plt.plot(people[f][:2], 'm*')
+print(counter)
+    
+
+plt.colorbar()
+plt.axis(aspect='image');
+
 ####### PEOPLE 
 
         # Need to invent random starting times for each person, can do in person array

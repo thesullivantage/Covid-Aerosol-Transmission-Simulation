@@ -24,7 +24,7 @@ gridY = np.arange(0, 100, step)
 
 
 def setCoord():
-    hold = int(int(height-height/25) * random.random())
+    hold = int((height-height/25) * random.random())
     if (hold <= height/25):
         hold += int(height/25)
     return hold 
@@ -44,15 +44,11 @@ def makePpl(Np):
 
     for p in range(Np): 
         # infected people at infNum percent
-        hold = [setCoord(), setCoord(), False, [setCoord(), setCoord()], int(500*random.random()//1), 0]
+        hold = [setCoord(), setCoord(), False, [setCoord(), setCoord()], int(300*random.random()//1), 0]
         if (p <= infNum):
             hold[2] = True
-    
-            
-        
+ 
         # Otherwise, they are non-infected 
-       
-        
 
         distance = np.subtract(np.array(hold[3]), np.array(hold[:2]))
         angle = np.arctan2(distance[1], distance[0])
@@ -67,21 +63,16 @@ def makePpl(Np):
 people = makePpl(100)
 
 
-
-
-# ###############################3
-
-# SOURCE Here
-
 ## DIFFUSION
-time = 3600 
-# per second - I think that would make D correct
+
+# per second 
 dt = 1
 # Diffustion Coefficient
 D = .05
 # Square step for diffusion equation
 step2 = step * step
 
+# Initialize concentration field and "future" concentration
 c0 = np.zeros((len(gridX), len(gridY)))
 c = c0.copy()
 
@@ -94,15 +85,20 @@ def diffStep(c0, c):
     c[1:-1, 1:-1] = c0[1:-1, 1:-1] + dt * D* ((c0[2:, 1:-1] - 2*c0[1:-1, 1:-1] + c0[:-2, 1:-1] + c0[1:-1, 2:] - 2*c0[1:-1, 1:-1] + c0[1:-1, :-2])/step2 )
 
     c0 = c.copy()
-    # c0 is stored for next time, but is same as c 
+    # c0 is shallow copied for next time, but is same as c 
     return c0, c
 
 
-
 ## Walking
-avgWalkSpeed = .5
+
 # In m/s
-    
+
+# Average particles inhaled per second [m**-2]
+avgWalkSpeed = .5
+Vbreathe = .33
+tau = 50
+time = 3600 
+
 def setTarg(coord): 
     
     targ = [setCoord(), setCoord()]
@@ -123,14 +119,10 @@ def checkTarg(currCord, currTarg):
     return 0
         
 
+# IT'S TIME!
 
-
-Vbreathe = .33
-tau = 75
-
-
-# IT'S TIME! 
-for t in range(0, 700): 
+for t in range(0, 3600): 
+    
     
 
     #### Uncomment this when person done! 
@@ -158,19 +150,17 @@ for t in range(0, 700):
         ##### TRANSMISSION
         if (infBool  == True):
             # if the person is infected
+            # Different result if has just coughed 
             if ( t  % 600 == 0): 
                 # If time to cough, change concentration at current coordinates
                 # of infected person (Quantized nearest their location in 
                 # Concentration field)
+                print(t)
                 c0[int(xCoord), int(yCoord)] += (4*10**5 + 5)
             else: c0[int(xCoord), int(yCoord)] += 5
-        else: 
-# =============================================================================
-#             # coordinates are lined up from the beginning 
-# =============================================================================
-            # print(people[z][0], " ", people[z][1])
+        else:  
             dose += c0[int(xCoord), int(yCoord)] * Vbreathe
-            if (dose >= 700):
+            if (dose >= 1000):
                 # If healthy person accumulates critical dose of 100 particles, 
                 # infect them with the virus
                 people[z][2] = True
@@ -191,80 +181,36 @@ for t in range(0, 700):
         people[z][0] = xCoord + people[z][6][0] * dt
         people[z][1] = yCoord + people[z][6][1] * dt
         
+        # if (t % 30): 
+        #     if (people[z][1] > 80):
+        #         print(people[z][1])
 
-        
 
+plt.figure(dpi=150)
 plt.imshow(c, extent=[0, width, 0, height], origin='lower',cmap='Reds')
 
-    
-
+  
+healthX = []
+healthY = []
+infX = []
+infY = []
 counter = 0
 for f in range(Np): 
     if (people[f][2] == True):
         counter += 1 
-    # plt.plot(people[f][:2], 'm*')
-print(counter)
-    
+        infX.append(people[f][0])
+        infY.append(people[f][1])
+    else: healthX.append(people[f][0]); healthY.append(people[f][1])
 
+print("Infected: ", counter)
+
+plt.plot(infX, infY, 'r.')
+plt.plot(healthX, healthY, 'b.')
 plt.colorbar()
 plt.axis(aspect='image');
 
-####### PEOPLE 
-
-        # Need to invent random starting times for each person, can do in person array
-        # cough at at the beginning of time, and then every 10 minutes
-
-        # Normal Breathing (per second)
-        
-        
-        # GET DOSE, change person; will start coughing & breathing next time
-
-# Need a person array now Np x 3 (x, y, bool)
-    # true = infected
-    # on creation, do percent infected 
-    # down the code, conditional expulsion vs. not at their coord
-# need convert coord to 2D array
-# For Each Person: 
-# have Np x  4 (vX, vY, target, target) array for toTarget components (global)
-# for each time step
-    ## maybe lump this as below function:
-    # for each person`
-        
-        # check reached (within R) 
-        # if beginning or (reached):
-            # set target 
-            # Calculate X & Y velocity to get there: set
-        # increment by timestep (finite difference)
 
 
-   
-    
-    
-    
-    # Find frequency of talking and put it here
-
-
-
-
-
-
-
-# dosing
-# if (c[healthX, healthY] > 1):
-#     plt.plot(gridX[healthX], gridY[healthY],           'ro')
-
-# plt.plot(gridX[healthX], gridY[healthY],           'bo')
-
-
-# for a in range(0, len(gridX)):
-#     for b in range(0,len(gridY)):
-#         if (c[a,b] > 1000): 
-#             print(c[a, b])
-
-# plt.plot(gridX[infX], gridY[infY], 'ro')
-# plt.legend(loc='best', borderaxespad=.3)
-# # plt.xlabel('x');plt.ylabel('high order')
-# plt.grid(True)
 plt.show()
 
 

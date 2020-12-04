@@ -22,39 +22,61 @@ step = height / numX
 gridX = np.arange(0, 100, step)
 gridY = np.arange(0, 100, step)
 
-def randLoc(): 
-    return int(len(gridX) * random.random()//1)
 
 def setCoord():
-    hold = randLoc()
-    while (hold in range(0,int(height/20)) or hold in range(int(height-height/20),height)):
-        hold = randLoc()
-    return hold
-
-    
-# First Person
-healthCoord = [setCoord(), setCoord()]
+    hold = int(int(height-height/25) * random.random()//1)
+    if (hold <= height/25):
+        hold += int(height/25)
+    return hold 
 
 
 
-
-def setPpl(healthCoord, infCoord): 
-    infCoord = [setCoord(), setCoord()]
-
-    # will have to loop through all v's eventually, would insert here
-    v = np.sqrt(np.abs(healthCoord[0]-infCoord[0])**2+(healthCoord[1]-infCoord[1])**2)//1
-    # remember, in terms of steps
-    while(v < 5 ):
+### PEOPLE INSERTION
+# Number of people
+Np = 25
+# Format [currX, currY, Infected, targetArr, coughOffSet, Dose]
+# coughOffSet chosen arbitrarily so all people do not cough on cue at 10 minute intervals
+def makePpl(Np):
+    array = []
+    # Prevalence of Infected Person 
+    # ***** May need to come back to this
+    infNum = int(Np*.05)
+    for p in range(Np): 
+        # infected people at infNum percent
+        if (p <= infNum):
+            hold = [setCoord(), setCoord(), True, [setCoord(), setCoord()], int(500*random.random()//1), 0]
+            
         
-       infCoord = [setCoord(), setCoord()]
-    # (and end here)
-    return infCoord
+        # Otherwise, they are non-infected 
+        hold = [setCoord(), setCoord(), False, [setCoord(), setCoord()], int(500*random.random()//1), 0]
+        
 
-infCoord = setPpl()
+        distance = np.subtract(np.array(hold[3]), np.array(hold[:2]))
+        # print(distance)
+        angle = np.arctan2(distance[1], distance[0])
+        velArr = [0, 0]
+        velArr[0] = .5 * np.cos(angle) 
+        velArr[1] = .5 * np.sin(angle)
+        hold.append(velArr)
+        array.append(hold)
+    return array
+
+ 
+people = makePpl(100)
+
+
+
+
+
+
+
+
+# ###############################3
+
 
 # SOURCE Here
 
-## Diffusion
+## DIFFUSION
 time = 3600 
 # per second - I think that would make D correct
 dt = 1
@@ -66,11 +88,12 @@ step2 = step * step
 c0 = np.zeros((len(gridX), len(gridY)))
 c = c0.copy()
 
-
 def diffStep(c0, c):
 # Diffusion equation, vectorized. 
 # Propagate with forward-difference in time, central-difference in space
 # D must change depending on step size 
+######### Thus far drops off at the boundaries
+    
     c[1:-1, 1:-1] = c0[1:-1, 1:-1] + dt * D* ((c0[2:, 1:-1] - 2*c0[1:-1, 1:-1] + c0[:-2, 1:-1] + c0[1:-1, 2:] - 2*c0[1:-1, 1:-1] + c0[1:-1, :-2])/step2 )
 
     c0 = c.copy()
@@ -79,6 +102,10 @@ def diffStep(c0, c):
 
 
 
+## Walking
+avgWalkSpeed = .5
+# In m/s
+    
 def setTarg(coord): 
     
     targ = [setCoord(), setCoord()]
@@ -86,10 +113,90 @@ def setTarg(coord):
     # will have to loop through all v's eventually, would insert here
     v = np.sqrt(np.abs(coord[0]-targ[0])**2+(coord[1]-targ[1])**2)//1
     # remember, in terms of steps
-    while(v < 5 ):
-       targ = [setCoord(), setCoord()]
+    while(v < 1 ):
+        targ = [setCoord(), setCoord()]
     # (and end here)
     return targ
+
+def checkTarg(currCord, currTarg): 
+
+    v = np.sqrt(np.abs(currCord[0]-currTarg[0])**2+(currCord[1]-currTarg[1])**2)//1
+    if(v < 0.5 ):
+        return 1
+    return 0
+        
+
+# IT'S TIME! 
+
+Vbreathe = .33
+tau = 100
+for t in range(0, 5200): 
+    
+    
+    #### Uncomment this when person done! 
+    # # run the diffusion finite difference step
+    c0, c = diffStep(c0, c)
+    
+    # # Ventilation instantaneously removes some particles out of the air per second (1%)
+    c0 = c0 - dt * c0/tau
+    
+
+    for z in range(len(people)): 
+        xCoord = people[z][0]
+        yCoord = people[z][1]
+        infBool = people[z][2] 
+        targetArr = people[z][3]
+        coughSet = people[z][4]
+        dose = people[z][5]
+        xVel = people[z][6][0]
+        yVel = people[z][6][1]
+        distance = np.array([0, 0])
+        
+        # Could use copy here
+        # Format [currX, currY, Infected, targetArr, coughOffSet, Dose]
+        ##### TRANSMISSION
+        if (infBool == True):
+            if ( t  % 600 == 0): 
+                c0[int(xCoord), int(yCoord)] += (4*10**5 + 5)
+                print("bing")
+            c0[xCoord, yCoord] += 5
+        else: 
+            people[z][5] += c0[int(xCoord), int(yCoord)] * Vbreathe
+        if (dose >= 100):
+            infBool = True
+        
+        combCoord = people[z][:2]
+        ## WALKING
+        if (checkTarg(combCoord, targetArr) == 1):
+            targetArr = setTarg(combCoord)
+            distance = np.subtract(np.array(targetArr), np.array(combCoord))
+            angle = np.arctan2(distance[1], distance[0])
+            xVel = .5 * np.cos(angle) 
+            yVel = .5 * np.sin(angle)
+        
+        if (t == 700): 
+            break
+            break 
+        
+        print("----------------")
+        print(xCoord)
+        xCoord = xCoord + xVel * dt
+        xCoord = xCoord + xVel * dt
+        print(xCoord)
+        
+plt.imshow(c, extent=[0, 100, 0, 100], origin='lower',cmap='Reds')
+plt.colorbar()
+plt.axis(aspect='image');    
+    
+####### PEOPLE 
+
+        # Need to invent random starting times for each person, can do in person array
+        # cough at at the beginning of time, and then every 10 minutes
+
+        # Normal Breathing (per second)
+        
+        
+        # GET DOSE, change person; will start coughing & breathing next time
 
 # Need a person array now Np x 3 (x, y, bool)
     # true = infected
@@ -107,55 +214,17 @@ def setTarg(coord):
             # set target 
             # Calculate X & Y velocity to get there: set
         # increment by timestep (finite difference)
-        
-        
-        
-def personStep(coord0, coord):
-    
-    # COME BACK HERE
-    setTarg()
-    
-    # initial position of person inputted
-    
-    # pick target 
-    # Start walking there 
-        # fixed walking speed (by r) -- need calculate
-    # when reached target or  (< 1 m) of boundary: pick new target rmax away    
-    # check to see if within .5 of other person
-    # if yes, bounce 
-    pass
-    # do vectorized again 
-    # finite difference 
 
 
-# for each person: 
-    # get target (out of array)
-
-### ANIMATION: This needs to be defined as an update function: read docs later, have commented out for loop 
-
-for t in range(0, 5200): 
+   
     
-    # run the diffusion finite difference step
-    c0, c = diffStep(c0, c)
     
-    # cough at at the beginning of time, and then every 10 minutes
-    if (t == 0 or t % 600 == 0): 
-        c0[infCoord[0], infCoord[1]] += (4*10**5 + 5)
-        
-    # Normal Breathing (per second)
-    c0[infCoord[0], infCoord[1]] += 5
-    
-    # Ventilation instantaneously removes some particles out of the air per second (1%)
-    c0 = c0 - dt * c0/100
     
     # Find frequency of talking and put it here
 
 
 
-plt.imshow(c, extent=[0, 100, 0, 100], origin='lower',
-            cmap='Reds')
-plt.colorbar()
-plt.axis(aspect='image');
+
 
 
 

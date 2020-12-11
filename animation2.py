@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 Writer = animation.writers['ffmpeg']
-writer = Writer(fps=15, bitrate=1800)
+writer = Writer(fps=16, bitrate=1800)
 
 
 ## 2D Simulation
@@ -20,11 +20,11 @@ writer = Writer(fps=15, bitrate=1800)
 height=100
 width=100
 # Number of points in each dimension 
-numX = 100
-numY = 100
+num = 1000
+
 
 # Spatial Step
-step = height / numX
+step = height / num
 
 
 ### FIX gridX tomrrow!!!!! need in regular meters ! 
@@ -37,27 +37,33 @@ gridY = np.arange(0, 100, step)
 Np = 50
 # per second 
 dt = 1
-# Diffustion Coefficient (m**2/s)
+# Diffustion Coefficient (m**2/s) - - ADJUSTED FOR NEW GRID (10 MORE STEPS EACH FOR RESOLUTION)
 D = .05
 
-# Average walking speed (m/s) chosen from [1]
-avgWalkSpeed = .5
+# Average walking speed (m/s) chosen from [1] - - ADJUSTED FOR NEW GRID (10 MORE STEPS EACH FOR RESOLUTION)
+avWalk = .5 * 10
 # Volume air inhaled per second (m**3/s)
 Vbreathe = .0033
 # Removal Timescale (ventilation) (sseconds)
 tau = 50
 # time from 0 to increment simulation (seconds)
-time = 700 
+time = 100 * 10
+
+div = len(gridX)/4
+
+
+
+print(div)
 
 def setCoord():
-    hold = int((height-height/25) * random.random())
-    if (hold <= height/25):
-        hold += int(height/25)
+    hold = int((height-height/div) * random.random())
+    if (hold <= height/div):
+        hold += int(height/div)
     return hold 
 
 ### PEOPLE INSERTION
 
-# Format [currX, currY, Infected, targetArr, coughOffSet, Dose, velocity]
+# Format [currX, currY, Infected, targetArr, coughOffSet, Dose, velocity, symptomaticBoolean]
 # coughOffSet chosen arbitrarily so all people do not cough on 
 # cue at 10 minute intervals
 def makePpl(Np):
@@ -65,7 +71,8 @@ def makePpl(Np):
     # Prevalence of Infected Person 
     # ***** May need to come back to this
     infNum = int(Np*.05)
-
+    
+    val = random.random()*.25+.25
     for p in range(Np): 
         # infected people at infNum percent
         hold = [setCoord(), setCoord(), False, [setCoord(), setCoord()], int(300*random.random()//1), 0]
@@ -80,19 +87,28 @@ def makePpl(Np):
         velArr[0] = .5 * np.cos(angle) 
         velArr[1] = .5 * np.sin(angle)
         hold.append(velArr)
+        
+        # 25-50 symptomatic -- give parameter
+        sympt = random.random()
+        
+        if(sympt < val):
+            hold.append(True)
+        else: hold.append(False)
+        
         array.append(hold)
     return array
 
  
 people = makePpl(Np)
 
+print(people[0])
 
 ## DIFFUSION
 
 # Square step for diffusion equation
 step2 = step * step
 # Initialize concentration field and "future" concentration
-c0 = np.zeros((len(gridX), len(gridY)))
+c0 = np.zeros((len(gridX)*10, 10*len(gridY)), dtype='float64')
 c = c0.copy()
 
 def diffStep(c0, c):
@@ -101,7 +117,7 @@ def diffStep(c0, c):
 # D must change depending on dt step size 
 ######### Thus far drops off at the boundaries
     
-    c[1:-1, 1:-1] = c0[1:-1, 1:-1] + dt * D* ((c0[2:, 1:-1] + c0[:-2, 1:-1] + c0[1:-1, 2:] - 4*c0[1:-1, 1:-1] + c0[1:-1, :-2])/step2 )
+    c[1:-1, 1:-1] = c0[1:-1, 1:-1] + dt * D * ((c0[2:, 1:-1] + c0[:-2, 1:-1] + c0[1:-1, 2:] - 4*c0[1:-1, 1:-1] + c0[1:-1, :-2])/step2 )
 
     c0 = c.copy()
     # c0 is shallow copied for next time, but is same as c 
@@ -140,6 +156,8 @@ for t in range(0, time):
     # # Ventilation instantaneously removes some particles out of the air per second (1%)
     # We want to be acting on c0 before next iteration
     c0 = c0 - dt * c0/tau
+    print(t)
+    
     
     # ANIMATION holders
     healthX = []
@@ -200,8 +218,8 @@ for t in range(0, time):
             # set new velocity based on angle
             distance = np.subtract(np.array(targetArr), np.array(combCoord))
             angle = np.arctan2(distance[1], distance[0])
-            people[z][6][0] = .5 * np.cos(angle) 
-            people[z][6][1] = .5 * np.sin(angle)
+            people[z][6][0] = avWalk * np.cos(angle) 
+            people[z][6][1] = avWalk * np.sin(angle)
         
         
         # References to velocity still work, if we've set above
@@ -209,6 +227,8 @@ for t in range(0, time):
         # Update each person coordinate with forward Euler forward scheme 
         people[z][0] = xCoord + people[z][6][0] * dt
         people[z][1] = yCoord + people[z][6][1] * dt
+        
+        
         
        
     # ANIMATION- append to array of images
@@ -221,7 +241,7 @@ plt.colorbar()
 plt.axis(aspect='image');
 plt.figure(dpi=150)
 ani = animation.ArtistAnimation(fig, ims, interval=1, blit=True, repeat=False)
-ani.save('simulation.mp4', writer=writer)
+ani.save('BEEP.mp4', writer=writer)
 
 
 

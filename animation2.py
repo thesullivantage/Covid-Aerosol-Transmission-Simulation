@@ -17,10 +17,10 @@ writer = Writer(fps=16, bitrate=1800)
 
 ## 2D Simulation
 # number of x & y coordinates
-height=100
-width=100
+height=50
+width=50
 # Number of points in each dimension 
-num = 1000
+num = 50
 
 
 # Spatial Step
@@ -41,20 +41,26 @@ dt = 1
 D = .05
 
 # Average walking speed (m/s) chosen from [1] - - ADJUSTED FOR NEW GRID (10 MORE STEPS EACH FOR RESOLUTION)
-avWalk = .5 * 10
+avWalk = .5 #* 10
 # Volume air inhaled per second (m**3/s)
-Vbreathe = .0033
+Vbreathe = .001* (1/3)
+print("vbreate: ", Vbreathe)
 # Removal Timescale (ventilation) (sseconds)
 tau = 50
 # time from 0 to increment simulation (seconds)
-time = 100 * 10
+time = 1000 #* 10
 
 div = len(gridX)/4
 
+# percent of the infected
+q = .02
+
+# Average concentration for inhalation inhaled 
+cAve = 40005*(q*Np)
 
 
-print(div)
 
+#DONT FORGET TO ALTER BELOW IN INCREASING RESOLUTION
 def setCoord():
     hold = int((height-height/div) * random.random())
     if (hold <= height/div):
@@ -70,8 +76,8 @@ def makePpl(Np):
     array = []
     # Prevalence of Infected Person 
     # ***** May need to come back to this
-    infNum = int(Np*.05)
-    
+    infNum = int(Np*.02)
+    print("infNum: ", infNum)
     val = random.random()*.25+.25
     for p in range(Np): 
         # infected people at infNum percent
@@ -101,14 +107,15 @@ def makePpl(Np):
  
 people = makePpl(Np)
 
-print(people[0])
+# Test a couple people
+# print(people[0], "\n", people[1])
 
 ## DIFFUSION
 
 # Square step for diffusion equation
 step2 = step * step
 # Initialize concentration field and "future" concentration
-c0 = np.zeros((len(gridX)*10, 10*len(gridY)), dtype='float64')
+c0 = np.zeros((len(gridX), len(gridY)), dtype='float64')
 c = c0.copy()
 
 def diffStep(c0, c):
@@ -146,6 +153,10 @@ def checkTarg(currCord, currTarg):
 # Defined for ANIMATION
 fig = plt.figure()
 ims = []
+
+
+
+
 ### UPDATE EVERYTHING
 # Loop through each second
 for t in range(0, time): 
@@ -156,7 +167,7 @@ for t in range(0, time):
     # # Ventilation instantaneously removes some particles out of the air per second (1%)
     # We want to be acting on c0 before next iteration
     c0 = c0 - dt * c0/tau
-    print(t)
+
     
     
     # ANIMATION holders
@@ -180,7 +191,6 @@ for t in range(0, time):
         yVel = people[z][6][1]
         distance = np.array([0, 0])
 
-        
         ## TRANSMISSION
         # If infected
         if (infBool  == True):
@@ -189,25 +199,37 @@ for t in range(0, time):
             infY.append(people[z][1])
             # if the person is infected
             # Different result if has just coughed 
-            if ( (t + coughSet)  % 600 == 0): 
+            if ( t   % 600 == 0): 
                 # If time to cough, change concentration at current         coordinates
                 # of infected person (Quantized nearest their location in 
                 # Concentration field)
                 c0[int(xCoord), int(yCoord)] += (4*10**5 + 5)
             else: c0[int(xCoord), int(yCoord)] += 5
         else:
+            if (dose > 50):
+                print("skur: ", dose, " ", z)
             # Holding for Animation
             healthX.append(people[z][0])
             healthY.append(people[z][1])
+            
             # Accumulates dose at coordinate, at pre-determined rate of 
             # breathing at the concentration nearest the person's spatial
             # coordinates (again, quantized for concentration field)
-            dose += c0[int(xCoord), int(yCoord)] * Vbreathe
-            if (dose >= 1000):
+            
+     
+                
+            inhaled = c0[int(xCoord), int(yCoord)] * Vbreathe
+
+            # DOSE CHECK
+            # print("BEEP: ", c0[int(xCoord), int(yCoord)] * Vbreathe)
+            
+            # ACCUMULATED DOSE here 
+            people[z][5] += inhaled
+            
+            if (dose >= 100):
                 # If healthy person accumulates critical dose of 100 particles, 
                 # infect them with the virus
                 people[z][2] = True
-        
         
         ## WALKING
         combCoord = people[z][:2] # for convenience
@@ -227,23 +249,39 @@ for t in range(0, time):
         # Update each person coordinate with forward Euler forward scheme 
         people[z][0] = xCoord + people[z][6][0] * dt
         people[z][1] = yCoord + people[z][6][1] * dt
+      
         
-        
-        
+
        
-    # ANIMATION- append to array of images
-    im = plt.imshow(c0, extent=[0, width, 0, height], origin='lower', animated=True, cmap='Reds')
-    # Store each image manually
-    ims.append([im])
+    # # ANIMATION- append to array of images
+    # im = plt.imshow(c0, extent=[0, width, 0, height], origin='lower', animated=True, cmap='Reds')
+    # # Store each image manually
+    # ims.append([im])
 
-print(len(ims))
-plt.colorbar()
-plt.axis(aspect='image');
-plt.figure(dpi=150)
-ani = animation.ArtistAnimation(fig, ims, interval=1, blit=True, repeat=False)
-ani.save('BEEP.mp4', writer=writer)
+count = 0
+for e in range(len(people)):
+    if(people[e][2] == True):
+        count += 1
+print("Number of People: ", Np)
+print("Infected People: ", count)
+        
 
+# print(len(ims))
+# plt.colorbar()
+# plt.axis(aspect='image');
+# plt.figure(dpi=150)
+# ani = animation.ArtistAnimation(fig, ims, interval=1, blit=True, repeat=False)
+# ani.save('testdec.mp4', writer=writer)
+        
+        
 
+# FROM MATLAB: ADJUSTMENTS:
+    # Cough
+        # rand < Pcough*dt to determine cough
+        # # Probability to cough once per hour.. or twice
+    # Inhale
+        # Vinh = 0.001*20/60; -- AMOUNT
+        # AT concentration spot: they use actual coordinates in concentration field
 
 
 

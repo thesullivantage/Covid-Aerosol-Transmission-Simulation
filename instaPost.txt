@@ -1,0 +1,54 @@
+I wanted to nerd post about a COVID transmission simulator I designed as a final project this semester. It is a 
+simulator of COVID aerosol transport that I collaborated with a Finnish scientist on to replicate one of his team's 
+simulations in the Python programming language. They got into more complex airflow modeling than I was able 
+to explore, using 3D models of grocery stores and a few other public places, managing to calculate a few 
+useful parameters about the air in a room that could be applied to the more basic simulation at hand.  
+I made a few mechanical adjustments for the switch to a new language, but it produces the same results as
+the original. 
+
+What we're looking at are people walking around a large room from above, with healthy infected people
+shuffling aimlessly around. The infected cough on cue every 10 minutes (working on randomizing this), and
+the healthy accumulate a virus in their body, with some becoming infected after a certain "dose". 
+
+where a few of the people have COVID initially and gradually begin to infect others by coughing/breathing.
+(working on making the people cough more randomly as opposed to the really gross flash mob that 
+occurs every 10 minutes where every infected person identifies themself with a cough). 
+
+There is very little airflow moving the airborne particles out of the room in the first video, which 
+results in a good bit of viral transmission.
+
+When we introduce a bit of ventilation, changing air in the room several times an hour, we see those
+numbers going down a good bit. 
+From what I understand, the change I made in the second graph, if we scaled down the room size and occupancy, 
+to the size of a restaurant, it could be equivalent to opening a few windows. I have quite a bit more
+improvements I could make (at the moment its filled with ghosts from hogwarts who float through each other),
+but 
+
+looking at a more regularly sized room (with the number of people scaled down as well), it would be about equivalent to opening a window. 
+Which can change the air about ??? times an hour. 
+
+Immune system -- myth? 
+
+It all deals with how the airborne particles spread, around our rothe om with no airflow passing through. 
+After adding a bit of ventilation, so much more of the airborne virus was removed before it could 
+infect anyone else, which we know is how it gets most people. 
+
+
+I went through a few iterations where I accidentally had the patrons of my 2 dimensional bar 
+sucking down way too much virus, but once I fixed their breathing, not as many people were 
+infected. 
+
+
+It all works through diffusion, which is how a substance spreads in a medium, and
+ventilation of the virus out of this "room". 
+
+Scientists concluded:
+	carries over to real life how:
+		How'd the CFD tie in, how valid? (still just looking at MonteCarlo results)
+ 
+(If you want to look at more, I'll post a link in my bio! )  
+
+Dilution and ventilation effects carried over from more complex simulations in the same study.
+These were based around 
+
+Opening windows increases the hourly air changes a room gets by a lot! 
